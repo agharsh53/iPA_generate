@@ -73,8 +73,8 @@ class _PieChartWidgetState extends State<PieChartWidget> {
       final categoryId = item.category.id;
       final amount = item.amount;
 
-          ifAbsent: () => amount);
-        }
+      aggregatedAmounts.update(categoryId, (value) => value + amount, ifAbsent: () => amount);
+      categories.putIfAbsent(categoryId, () => item.category); }
 
     return aggregatedAmounts.entries.map((entry) {
       final categoryId = entry.key;
@@ -95,17 +95,15 @@ class _PieChartWidgetState extends State<PieChartWidget> {
         } else if (snapshot.hasError) {
           return Center(child: Text('Error: ${snapshot.error}'));
         }
+        final type = widget.type.toLowerCase();
         final filteredItems = snapshot.data!
-            .where((item) =>
+            .where((item) => item.dataType ==type &&
             _isSameMonth(item.dateTime, widget.selectedMonth))
             .toList();
 
         // Aggregate the filtered items
         final aggregatedData = _aggregateData(filteredItems);
-
-            ? _totalExpense
-            ? _totalIncome
-            : _totalLoan;
+        final percentage = type == 'Expense' ? _totalExpense : type == 'Income' ? _totalIncome : _totalLoan;
 
         if (aggregatedData.isEmpty) {
           return PieChart(

@@ -52,6 +52,9 @@ class _StatisticScreenState extends State<StatisticScreen> {
       _getCategoryTypeFromString(_selectedButton),
     );
     _transactionsFuture =  _initScreen();
+    setState(() {
+
+    });
   }
   /// 🔹 Initial load
   Future<List<DataItem>> _initScreen() async {
@@ -71,6 +74,9 @@ class _StatisticScreenState extends State<StatisticScreen> {
     await _transactionService.fetchAllTransactions(categories);
 
     _calculateTotals(items);
+    setState(() {
+
+    });
     return items;
   }
 
