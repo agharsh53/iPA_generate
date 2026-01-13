@@ -7,10 +7,10 @@ A fully functional **Expense Tracker application** developed using **Flutter** w
 
 
 ### 📦 Get APK
-[Download here]([https://drive.google.com/file/d/1Q2ZWdVrMiPVDHEiJwcjwuP-ret-yHL2G/view?usp=sharing])
+[Download here](https://drive.google.com/file/d/1Q2ZWdVrMiPVDHEiJwcjwuP-ret-yHL2G/view?usp=sharing)
 
 ### 📦 Get IPA
-[Download here]([https://drive.google.com/file/d/1CEO1mujsCY02U9njwSFaLF8oTJwdRlQY/view?usp=sharing])
+[Download here](https://drive.google.com/file/d/1CEO1mujsCY02U9njwSFaLF8oTJwdRlQY/view?usp=sharing)
 
 ---
 
@@ -169,5 +169,6 @@ await Supabase.initialize(
 
 ## 📄 License
 This project is intended for **educational, internship, and evaluation purposes**.
+
 
 
