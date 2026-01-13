@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:money_tracker/repository/screen/splash_screen.dart';
 import 'package:money_tracker/common/color/colors.dart';
@@ -8,11 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart'; // Import permission_ha
 void main() async{
   WidgetsFlutterBinding.ensureInitialized();
 
-  await dotenv.load(fileName: ".env");
-
   await Supabase.initialize(
-    url: dotenv.env['SUPABASE_URL']!,
-    anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
   );
   usePathUrlStrategy();
   runApp(const MyApp());
@@ -24,8 +19,6 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    print(dotenv.env['SUPABASE_URL']);
-
     return MaterialApp(
       title: 'Money Tracker',
       debugShowCheckedModeBanner: false,

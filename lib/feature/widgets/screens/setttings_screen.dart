@@ -242,9 +242,7 @@ class _SetttingsScreenState extends State<SetttingsScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              CircleAvatar(
                 radius: 50.0,
-                backgroundImage: const AssetImage('assets/images/harsh_resume.jpg'),
               ),
               const SizedBox(height: 16.0),
               Text(username!, style: const TextStyle(fontSize: 20.0, fontWeight: FontWeight.bold)),
