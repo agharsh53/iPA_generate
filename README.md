@@ -3,16 +3,14 @@
 A fully functional **Expense Tracker application** developed using **Flutter** with **Supabase backend integration**, designed to work seamlessly across **Android, iOS, Web, and Desktop platforms**.
 
 ---
-
 ## ❤️ Try App
-### 📲 Scan QR Code
-<img src="https://github.com/agharsh53/MoneyTracker/blob/main/blob/screenshots/qr_moneytracker.png" width="300" height="300">  
 
-
----
 
 ### 📦 Get APK
-[Download here](https://drive.google.com/file/d/1zDhBn3uWEFVfadVqJLCWey7ZrHx0Ysdi/view?usp=drive_link)
+[Download here]([https://drive.google.com/file/d/1Q2ZWdVrMiPVDHEiJwcjwuP-ret-yHL2G/view?usp=sharing])
+
+### 📦 Get IPA
+[Download here]([https://drive.google.com/file/d/1CEO1mujsCY02U9njwSFaLF8oTJwdRlQY/view?usp=sharing])
 
 ---
 
@@ -171,4 +169,5 @@ await Supabase.initialize(
 
 ## 📄 License
 This project is intended for **educational, internship, and evaluation purposes**.
+
 
