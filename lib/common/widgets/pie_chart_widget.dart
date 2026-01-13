@@ -103,7 +103,7 @@ class _PieChartWidgetState extends State<PieChartWidget> {
 
         // Aggregate the filtered items
         final aggregatedData = _aggregateData(filteredItems);
-        final percentage = type == 'Expense' ? _totalExpense : type == 'Income' ? _totalIncome : _totalLoan;
+        final percentage = type == 'expense' ? _totalExpense : type == 'income' ? _totalIncome : _totalLoan;
 
         if (aggregatedData.isEmpty) {
           return PieChart(
