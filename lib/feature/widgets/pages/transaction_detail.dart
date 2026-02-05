@@ -1,10 +1,10 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-
+import 'package:provider/provider.dart';
 import '../../../models/category_model.dart';
 import '../../../models/data_item.dart';
-import '../../../services/transaction_service.dart';
+import '../../../provider/transaction_provider.dart';
 import 'edit_expense_screen.dart';
 
 class TransactionDetail extends StatefulWidget {
@@ -36,10 +36,7 @@ class TransactionDetail extends StatefulWidget {
 }
 
 class _TransactionDetailState extends State<TransactionDetail> {
-  final TransactionService _transactionService = TransactionService();
-
   bool get _isExpense => widget.dataType == 'expense';
-
 
   CategoryType get _categoryType {
     if (widget.dataType == 'expense') return CategoryType.expense;
@@ -209,7 +206,7 @@ class _TransactionDetailState extends State<TransactionDetail> {
 
   /// DELETE
   Future<void> _onDeletePressed() async {
-    await _transactionService.deleteTransaction(widget.itemId);
+    await context.read<TransactionProvider>().deleteTransaction(widget.itemId);
 
     if (!mounted) return;
 

@@ -1,13 +1,13 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import 'package:money_tracker/feature/home/pages/home_page.dart';
 import '../../../common/color/colors.dart';
 import '../../../common/widgets/button_row.dart';
 import '../../../models/category_model.dart';
 import '../../../models/data_item.dart';
-import '../../../services/category_service.dart';
-import '../../../services/transaction_service.dart';
+import '../../../provider/transaction_provider.dart';
 
 
 class AddExpensesScreen extends StatefulWidget {
@@ -22,21 +22,10 @@ class _AddExpensesScreenState extends State<AddExpensesScreen> {
   TextEditingController noteController = TextEditingController();
   DateTime _selectedDate = DateTime.now();
   TimeOfDay _selectedTime = TimeOfDay.now();
-  final categoryService = CategoryService();
-  late Future<List<Category>> _categoryFuture;
   Category? _selectedCategory;
   TextEditingController amountController = TextEditingController();
-  final transactionService = TransactionService();
 
-  @override
-  void initState() {
-    super.initState();
-    _categoryFuture =
-        categoryService.getCategoriesByType(_getCategoryTypeFromString(_selectedButton));
-    setState(() {
 
-    });
-  }
 
   CategoryType _getCategoryTypeFromString(String buttonText) {
     CategoryType type;
@@ -105,8 +94,9 @@ class _AddExpensesScreenState extends State<AddExpensesScreen> {
       dataType: _selectedCategory!.categoryType.name,
     );
 
-    final success = await transactionService.insertTransaction(dataItem);
+    final success = await context.read<TransactionProvider>().addTransaction(dataItem);
 
+    if(!mounted) return;
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Transaction added")),
@@ -122,16 +112,14 @@ class _AddExpensesScreenState extends State<AddExpensesScreen> {
 
 
   Widget _buildCategoryGrid() {
-    return FutureBuilder<List<Category>>(
-      future: _categoryFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const CircularProgressIndicator();
-        } else if (snapshot.hasError) {
-          return Text('Error: ${snapshot.error}');
-        } else if (snapshot.hasData) {
-          final categories = snapshot.data!;
-          return Wrap(
+    final categories =
+    context.watch<TransactionProvider>().categoriesForType(_selectedButton);
+
+    if (categories.isEmpty) {
+      return const Text('No data');
+    }
+
+    return Wrap(
             alignment: WrapAlignment.spaceEvenly,
             children: categories.map((category) {
               return InkWell(
@@ -181,11 +169,6 @@ class _AddExpensesScreenState extends State<AddExpensesScreen> {
               );
             }).toList(),
           );
-        } else {
-          return const Text('No data');
-        }
-      },
-    );
   }
 
   @override
@@ -220,7 +203,6 @@ class _AddExpensesScreenState extends State<AddExpensesScreen> {
               onButtonChanged: (value) {
                 setState(() {
                   _selectedButton = value;
-                  _categoryFuture = categoryService.getCategoriesByType(_getCategoryTypeFromString(value));
                   _selectedCategory = null;
                 });
               },

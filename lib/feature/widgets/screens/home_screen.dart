@@ -2,19 +2,15 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:money_tracker/common/color/colors.dart';
+import 'package:provider/provider.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-
 import '../../../common/widgets/balance_card.dart';
 import '../../../common/widgets/button_row.dart';
 import '../../../common/widgets/month_picker.dart';
 import '../../../common/widgets/transaction_listtile.dart';
-
-
-import '../../../models/category_model.dart';
 import '../../../models/data_item.dart';
-import '../../../services/transaction_service.dart';
+import '../../../provider/transaction_provider.dart';
 import '../pages/transaction_detail.dart';
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -24,111 +20,35 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final _client = Supabase.instance.client;
-  var time = DateTime.now();
   String _selectedMonth = '';
   String _selectedButton = 'Expense';
   String _searchText = ''; // Added search text state
   final TextEditingController _searchController = TextEditingController();
-  double _totalExpense = 0;
-  double _totalIncome = 0;
   bool _showBalance = false;
-  final transactionService = TransactionService();
-  late Future<List<DataItem>> _transactionsFuture;
-  List<Category> _categories = [];
 
 
   @override
   void initState() {
     super.initState();
 
-    _transactionsFuture = _initScreen(); // ✅ ALWAYS initialized
-  }
+    _loadSelectedMonth();
 
-  Future<List<DataItem>> _initScreen() async {
-    await _loadSelectedMonth();
-    await _loadCategories();
-
-    final items = await transactionService.fetchAllTransactions(_categories);
-
-    _calculateTotalsFromItems(items); // no extra fetch
-    return items;
-  }
-
-
-  Future<List<DataItem>> fetchAllTransactions(List<Category> categories) async {
-    final user = _client.auth.currentUser;
-    if (user == null) return [];
-
-    final response = await _client
-        .from('transactions')
-        .select()
-        .order('transaction_time', ascending: false);
-
-    final data = response as List;
-
-    return data.map((row) {
-      final category =
-      categories.firstWhere((c) => c.id == row['category_id']);
-
-      return DataItem(
-        id: row['id'],
-        category: category,
-        amount: (row['amount'] as num).toDouble(),
-        note: row['note'] ?? '',
-        dateTime: DateTime.parse(row['transaction_time']),
-        dataType: row['data_type'],
-      );
-    }).toList();
-  }
-
-
-  Future<void> _loadCategories() async {
-    final response =
-    await Supabase.instance.client.from('categories').select();
-
-    _categories = (response as List).map((map) {
-      return Category.fromSupabase(map);
-    }).toList();
-  }
-
-  Future<void> _loadTransactions() async {
-    await _loadCategories();
-
-    final future =
-    transactionService.fetchAllTransactions(_categories);
-
-    setState(() {
-      _transactionsFuture = future;
-    });
-  }
-
-  void _calculateTotalsFromItems(List<DataItem> items) {
-    double expense = 0;
-    double income = 0;
-
-    for (var item in items) {
-      if (_isSameMonth(item.dateTime, _selectedMonth)) {
-        if (item.dataType == 'expense') {
-          expense += item.amount;
-        } else if (item.dataType == 'income') {
-          income += item.amount;
-        }
+    // Ensure provider data is loaded (safe to call even if already
+    // initialized elsewhere, e.g. after login).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final provider = context.read<TransactionProvider>();
+      if (!provider.initialized) {
+        provider.initialize();
       }
-    }
-
-    setState(() {
-      _totalExpense = expense;
-      _totalIncome = income;
     });
   }
 
-
-
-
-  bool _isSameMonth(DateTime date, String selectedMonth) {
-    String formatted = DateFormat('MMM yyyy').format(date);
-    return formatted == selectedMonth;
+  DateTime _parseSelectedMonth() {
+    try {
+      return DateFormat('MMM yyyy').parse(_selectedMonth);
+    } catch (_) {
+      return DateTime.now();
+    }
   }
 
 
@@ -136,17 +56,16 @@ class _HomeScreenState extends State<HomeScreen> {
     final prefs = await SharedPreferences.getInstance();
     final storedMonth = prefs.getString('selectedMonth');
     setState(() {
-      _selectedMonth = storedMonth ?? DateFormat('MMM yyyy').format(
-          DateTime.now()); // Default to current month if null
+      _selectedMonth = storedMonth ?? DateFormat('MMM yyyy').format(DateTime.now());
     });
   }
 
   Future<void> _saveSelectedMonth(String month) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('selectedMonth', month);
-    final items = await transactionService.fetchAllTransactions(_categories);
-    _calculateTotalsFromItems(items);
   }
+
+
 
   void _showMonthPicker(BuildContext context) {
     showModalBottomSheet(
@@ -185,21 +104,22 @@ class _HomeScreenState extends State<HomeScreen> {
     );
 
     // If EditExpenseScreen was popped with a true result, reload transactions
-    if (result != null && result == true) {
-      _reloadData();
+    if (result == true && mounted) {
+      context.read<TransactionProvider>().refreshTransactions();
     }
   }
-  Future<void> _reloadData() async {
-    final items = await transactionService.fetchAllTransactions(_categories);
-    setState(() {
-      _transactionsFuture = Future.value(items);
-    });
-    _calculateTotalsFromItems(items);
-  }
 
+  String formatDate(DateTime date) {
+    return DateFormat('EEE, dd MMM HH:mm').format(date);
+  }
 
   @override
   Widget build(BuildContext context) {
+    final provider = context.watch<TransactionProvider>();
+    final selectedMonthDate = _parseSelectedMonth();
+    final totalExpense = provider.totalExpenseForMonth(selectedMonthDate);
+    final totalIncome = provider.totalIncomeForMonth(selectedMonthDate);
+
     return Scaffold(
       backgroundColor: Colors.white12,
 
@@ -281,7 +201,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             ? NumberFormat
                             .currency(
                             locale: 'en_IN', symbol: '₹', decimalDigits: 0)
-                            .format(_totalIncome - _totalExpense)
+                            .format(totalIncome - totalExpense)
                             : '******',
                         style: const TextStyle(
                           fontSize: 24,
@@ -302,7 +222,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       amount: NumberFormat
                           .currency(
                           locale: 'en_IN', symbol: '₹', decimalDigits: 0)
-                          .format(_totalExpense),
+                          .format(totalExpense),
                       color: Colors.red,
                       icon: Icons.trending_down,
                     ),
@@ -316,7 +236,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       amount: NumberFormat
                           .currency(
                           locale: 'en_IN', symbol: '₹', decimalDigits: 0)
-                          .format(_totalIncome),
+                          .format(totalIncome),
                       color: Colors.green,
                       icon: Icons.trending_up,
                     ),
@@ -375,7 +295,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                         const SizedBox(height: 16),
 
-                        _buildDataItemGrid(),
+                        _buildDataItemGrid(provider,selectedMonthDate),
 
 
                       ]
@@ -391,60 +311,39 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
 
-  String formatDate(DateTime date) {
-    return DateFormat('EEE, dd MMM HH:mm').format(date);
-  }
+
+  Widget _buildDataItemGrid(TransactionProvider provider, DateTime selectedMonthDate) {
+    if (provider.isLoading && !provider.initialized) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (provider.error != null) {
+      return Center(child: Text('Error: ${provider.error}'));
+    }
 
 
-  Widget _buildDataItemGrid() {
-    return FutureBuilder<List<DataItem>>(
-      future: _transactionsFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        } else if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
-        } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return Center(child: SingleChildScrollView(
-            child: Column(
-              children: [
-                SizedBox(height: 200,
-                    width: 200,
-                    child: Image.asset('assets/images/expense.png')),
-                Text('Add your first $_selectedButton to get started!',
-                  style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.bold),),
-                const SizedBox(height: 80,)
-              ],
-            ),
-          ));
-        }
+    final filteredItems = provider.filterTransactions(
+      type: _selectedButton.toLowerCase(),
+      month: selectedMonthDate,
+      searchText: _searchText,
+    );
 
-        final filteredItems = snapshot.data!
-            .where((item) =>
-        item.dataType == _selectedButton.toLowerCase() &&
-            (_isSameMonth(item.dateTime, _selectedMonth) == true &&
-                (item.category.name.toLowerCase().contains(
-                    _searchText.toLowerCase()) ||
-                    item.note!.toLowerCase().contains(
-                        _searchText.toLowerCase()) ||
-                    item.amount.toString().contains(_searchText))))
-            .toList();
-        if (filteredItems.isEmpty) {
-          return Center(child: SingleChildScrollView(
-            child: Column(
-              children: [
-                SizedBox(height: 200,
-                    width: 200,
-                    child: Image.asset('assets/images/expense.png')),
-                Text('Add your first $_selectedButton to get started!',
-                  style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.bold),),
-                const SizedBox(height: 80,)
-              ],
-            ),
-          ));
-        }
+    if (filteredItems.isEmpty) {
+      return Center(child: SingleChildScrollView(
+        child: Column(
+          children: [
+            SizedBox(height: 200,
+                width: 200,
+                child: Image.asset('assets/images/expense.png')),
+            Text('Add your first $_selectedButton to get started!',
+              style: const TextStyle(
+                  fontSize: 16, fontWeight: FontWeight.bold),),
+            const SizedBox(height: 80,)
+          ],
+        ),
+      ));
+    }
+
         return Column(
           children: filteredItems.map((item) {
             return TransactionListTile(
@@ -460,8 +359,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 '${item.id}'
             );
           }).toList(),
-        );
-      },
     );
   }
 }

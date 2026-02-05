@@ -1,14 +1,13 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:money_tracker/feature/home/pages/home_page.dart';
+import 'package:provider/provider.dart';
 import '../../../common/color/colors.dart';
 import '../../../common/widgets/button_row.dart';
-import '../../../common/widgets/category_card.dart';
-
 import '../../../models/category_model.dart';
 import '../../../models/data_item.dart';
-import '../../../services/transaction_service.dart';
+import '../../../provider/transaction_provider.dart';
+
 
 class EditExpenseScreen extends StatefulWidget {
   final DataItem dataItem;
@@ -28,10 +27,6 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
   String _selectedButton = 'Expense';
 
 
-
-  final TransactionService _transactionService = TransactionService();
-  late Future<List<Category>> _categoryFuture;
-
   @override
   void initState() {
     super.initState();
@@ -49,7 +44,6 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
         ? 'Income'
         : 'Loan';
     _selectedCategory = item.category;
-    _categoryFuture = _transactionService.fetchCategories(_getCategoryType(_selectedButton));
   }
 
   CategoryType _getCategoryType(String buttonText) {
@@ -112,7 +106,7 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
 
     print("DataItem object being updated: ${updatedDataItem}"); // DEBUG
 
-    final success = await _transactionService.updateTransaction(updatedDataItem);
+    final success = await context.read<TransactionProvider>().updateTransaction(updatedDataItem);
 
     if (!mounted) return;
 
@@ -126,16 +120,13 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
   }
 
   Widget _buildCategoryGrid() {
-    return FutureBuilder<List<Category>>(
-      future: _categoryFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const CircularProgressIndicator();
-        } else if (snapshot.hasError) {
-          return Text('Error: ${snapshot.error}');
-        } else if (snapshot.hasData) {
-          final categories = snapshot.data!;
-          return Wrap(
+    final categories =
+    context.watch<TransactionProvider>().categoriesForType(_selectedButton);
+
+    if (categories.isEmpty) {
+      return const Text('No categories found');
+    }
+    return  Wrap(
             alignment: WrapAlignment.spaceEvenly,
             children: categories.map((category) {
               return InkWell(
@@ -181,11 +172,6 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
                 ),
               );
             }).toList(),
-          );
-        } else {
-          return const Text('No categories found');
-        }
-      },
     );
   }
 
@@ -216,8 +202,6 @@ class _EditExpenseScreenState extends State<EditExpenseScreen> {
               onButtonChanged: (value) {
                 setState(() {
                   _selectedButton = value;
-                  _categoryFuture =  _transactionService
-                      .fetchCategories(_getCategoryType(value));
                   _selectedCategory = null;
                 });
               },

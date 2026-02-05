@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
+import 'package:money_tracker/provider/transaction_provider.dart';
 import 'package:money_tracker/repository/screen/splash_screen.dart';
 import 'package:money_tracker/common/color/colors.dart';
+import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart'; // Import permission_handler for runtime permission
 
 void main() async{
@@ -24,7 +26,9 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return ChangeNotifierProvider<TransactionProvider>(
+        create: (_) => TransactionProvider(),
+        child: MaterialApp(
       title: 'Money Tracker',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
@@ -34,6 +38,7 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       home: const SplashScreen(),
+        ),
     );
   }
 }
